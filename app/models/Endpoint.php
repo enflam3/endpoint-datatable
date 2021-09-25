@@ -1,10 +1,13 @@
 <?php
-class Endpoint
+
+class Endpoint extends Parse
 {
     private $db;
+
     public function __construct()
     {
         $this->db = new Database;
+
     }
 
     private $apiUrl = API_URL;
@@ -13,7 +16,6 @@ class Endpoint
 
     public function apiResponse($limit, $offset)
     {
-
         $endpoint = $this->apiUrl . '?key=' . $this->apiKey . '&limit=' . $limit . '&offset=' . $offset;
 
         if (($endpoint_data = @file_get_contents($endpoint)) === false)
@@ -46,11 +48,16 @@ class Endpoint
                     $endpoint_result = $endpoint_data->data;
 
                     //Write API Hex array to DB
-                    for ($i = 1; $i <= $limit; $i++) {
-                        $this->db->query('INSERT INTO datatable (timestamp, data1, data2) VALUES(:timenow, :offset, :hexstr)');
-                        $this->db->bind(':timenow', date("d-m-Y H:i:s"));
-                        $this->db->bind(':offset', $offset);
-                        $this->db->bind(':hexstr', $endpoint_result[$i-1]);
+                    for ($i = 1; $i <= $limit; $i++) {+
+                        $hexstr = $endpoint_result[$i-1];
+                        $this->db->query('INSERT INTO datatable (timestamp, data1, data2, data3, data4, raw) VALUES(:timestamp, :gps, :data2, :data3, :data4, :raw)');
+                        $this->db->bind(':timestamp', $this->getTimestamp($hexstr));
+                        $this->db->bind(':gps', $this->getGps($hexstr));
+                        $this->db->bind(':data2', $this->getOnebyteIO($hexstr));
+                        $this->db->bind(':data3', $this->getTwobyteIO($hexstr));
+                        $this->db->bind(':data4', $this->getFourbyteIO($hexstr));
+                        $this->db->bind(':raw', $hexstr);
+                        
                     //Execute function
                         $this->db->execute();
                     }
@@ -59,7 +66,6 @@ class Endpoint
         }
 
         return $endpoint_result;
-
     }
 
 }
